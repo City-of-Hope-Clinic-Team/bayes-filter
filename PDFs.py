@@ -71,3 +71,5 @@ def plot4PDFs(accel_data_all):
     plt.xlabel('Energy')
     plt.ylabel('Probability')
     plt.show()
+
+importData()
