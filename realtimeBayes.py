@@ -13,75 +13,74 @@ sitOverTime = []
 lyingOverTime = []
 walkOverTime = []
 jogOverTime = []
-def realtimeBayes(statMU, statSTD, lyingMU, lyingSTD, walkMU, walkSTD, jogMU, jogSTD, ser):
+def realtimeBayes(statMU, statSTD, walkMU, walkSTD, jogMU, jogSTD, ser):
     # Initial Belief
-    priorBelStat = 0.25
-    priorBelLying = 0.25
-    priorBelWalk = 0.25
-    priorBelJog = 0.25
+    priorBelStat = 0.34
+    priorBelWalk = 0.33
+    priorBelJog = 0.33
     
     belCorrectionStatNorm = [priorBelStat]
-    belCorrectionLyingNorm = [priorBelLying]
     belCorrectionWalkNorm = [priorBelWalk]
     belCorrectionJogNorm = [priorBelJog]
 
     while True:
         ser_bytes = ser.readline()
-        decoded_bytes = ser_bytes[0:len(ser_bytes)-2].decode("utf-8")
+        decoded_bytes = ser_bytes[0:len(ser_bytes)-1].decode("utf-8")
         str_list = decoded_bytes.split(",")
         output = [int(i) for i in str_list]
         e = math.sqrt(output[0]**2 + output[1]**2 + output[2]**2)
+        y = output[1]
 
         # PREDICTION STEP: Belief in each state
-        belPredictionStat = (probStoS * priorBelStat) + (probLtoS * priorBelLying) + (probWtoS * priorBelWalk) + (probJtoS * priorBelJog)  # Prediction of being stat
-        belPredictionLying = (probStoL * priorBelStat) + (probLtoL * priorBelLying) + (probWtoL * priorBelWalk) + (probJtoL * priorBelJog)  # Prediction of being stat
-        belPredictionWalk = (probStoW * priorBelStat) + (probLtoW * priorBelLying) + (probWtoW * priorBelWalk) + (probJtoW * priorBelJog)  # Prediction of being walk
-        belPredictionJog = (probStoJ * priorBelStat) + (probLtoJ * priorBelLying) + (probWtoJ * priorBelWalk) + (probJtoJ * priorBelJog)  # Prediction of being jog
+        belPredictionStat = (probStoS * priorBelStat) + (probWtoS * priorBelWalk) + (probJtoS * priorBelJog)  # Prediction of being stat
+        belPredictionWalk = (probStoW * priorBelStat) + (probWtoW * priorBelWalk) + (probJtoW * priorBelJog)  # Prediction of being walk
+        belPredictionJog = (probStoJ * priorBelStat) + (probWtoJ * priorBelWalk) + (probJtoJ * priorBelJog)  # Prediction of being jog
 
         # CORRECTION STEP: Belief in each state
         numeratorStat = norm.pdf(e, statMU, statSTD) * belPredictionStat
-        numeratorLying = norm.pdf(e, lyingMU, lyingSTD) * belPredictionLying
         numeratorWalk = norm.pdf(e, walkMU, walkSTD) * belPredictionWalk
         numeratorJog = norm.pdf(e, jogMU, jogSTD) * belPredictionJog
 
-        normFactor = (numeratorStat + numeratorLying + numeratorWalk + numeratorJog)
+        normFactor = (numeratorStat + numeratorWalk + numeratorJog)
         statProb = numeratorStat / normFactor
-        lyingProb = numeratorLying / normFactor
         walkProb = numeratorWalk / normFactor
         jogProb = numeratorJog / normFactor
 
         priorBelStat = belCorrectionStatNorm[-1]  # update prior belief for next iteration
-        priorBelLying = belCorrectionLyingNorm[-1]  # update prior belief for next iteration
         priorBelWalk = belCorrectionWalkNorm[-1]  # update prior belief for next iteration
         priorBelJog = belCorrectionJogNorm[-1]  # update prior belief for next iteration
 
-        sitOverTime.append(statProb)
-        lyingOverTime.append(lyingProb)
+        if y > 0:
+            lyingOverTime.append(statProb)
+            sitOverTime.append(0)
+        else:
+            sitOverTime.append(statProb)
+            lyingOverTime.append(0)
         walkOverTime.append(walkProb)
         jogOverTime.append(jogProb)
-        printState(statProb, lyingProb, walkProb, jogProb)
+        printState(statProb, walkProb, jogProb, y)
 
 stateOverTime = []
-def printState(stat, lying, walk, jog):
-    if max(stat, lying, walk, jog) == stat:
+def printState(stat, walk, jog, y):
+    if max(stat, walk, jog) == stat and y < 0:
         print(colored("sitting",'blue'))
         stateOverTime.append(0)
-    elif max(stat, lying, walk, jog) == lying:
+    elif max(stat, walk, jog) == stat and y > 0:
         print(colored("lying", 'yellow'))
         stateOverTime.append(1)
-    elif max(stat, lying, walk, jog) == walk:
+    elif max(stat, walk, jog) == walk:
         print(colored("walk", 'green'))
         stateOverTime.append(2)
-    elif max(stat, lying, walk, jog) == jog:
+    elif max(stat, walk, jog) == jog:
         print(colored("jog", 'red'))
         stateOverTime.append(3)
     else:
         print("all equal")
         stateOverTime.append(0)
 
-def realtimeBayesWrapper(statmu, statstd, lyingmu, lyingstd, walkmu, walkstd, jogmu, jogstd, ser):
+def realtimeBayesWrapper(statmu, statstd, walkmu, walkstd, jogmu, jogstd, ser):
     try:
-        realtimeBayes(statmu, statstd, lyingmu, lyingstd, walkmu, walkstd, jogmu, jogstd, ser)
+        realtimeBayes(statmu, statstd, walkmu, walkstd, jogmu, jogstd, ser)
     except KeyboardInterrupt:
         y = np.arange(0, 4, 1)
         y_ticks_labels = ['stationary', 'lying down', 'walking', 'jogging']
@@ -91,7 +90,7 @@ def realtimeBayesWrapper(statmu, statstd, lyingmu, lyingstd, walkmu, walkstd, jo
         ax.plot(walkOverTime, label = 'walking')
         ax.plot(jogOverTime, label = 'jogging')
 
-        samplingRate = 1.4
+        samplingRate = 2
         time = np.linspace(0, (1/samplingRate) * len(sitOverTime), num = len(sitOverTime))
 
         ax.set_ylabel("Probability")
