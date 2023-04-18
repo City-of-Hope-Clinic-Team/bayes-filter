@@ -20,7 +20,7 @@ def importData():
     # Compile all the accel data into one array, rename the column titles
     accel_data_all.columns = ["Stationary Energy", "Walking Energy", "Jogging Energy"]
 
-    # plot4PDFs(accel_data_all)
+    plot3PDFs(accel_data_all)
 
     return accel_data_all
 
@@ -55,7 +55,7 @@ def plotPDF(mu, std, energy, state):
     plt.ylabel("Count of data points")
     plt.show()
 
-def plot4PDFs(accel_data_all):
+def plot3PDFs(accel_data_all):
     states = ['stationary', 'walking', 'jogging']
     plt.figure()
     for i in range(0,3):
