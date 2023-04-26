@@ -20,7 +20,7 @@ def importData():
     # Compile all the accel data into one array, rename the column titles
     accel_data_all.columns = ["Stationary Energy", "Walking Energy", "Jogging Energy"]
 
-    plot3PDFs(accel_data_all)
+    # plot3PDFs(accel_data_all)
 
     return accel_data_all
 
@@ -51,7 +51,7 @@ def plotPDF(mu, std, energy, state):
     plt.suptitle("Histogram of " + state + " Data" + " mu: " + str(round(mu)) + " std: " + str(round(std)), fontsize=12)
     plt.title("p(ei|xi = " + state + ")", fontsize=10)
     plt.xlim([0,35000])
-    plt.xlabel("Energy")
+    plt.xlabel("Total Acceleration")
     plt.ylabel("Count of data points")
     plt.show()
 
